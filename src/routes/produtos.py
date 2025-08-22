@@ -34,14 +34,24 @@ def carregar_produtos():
                             'category': row.get('global_category1', ''),
                             'rating': float(row.get('item_rating', 0))
                         }
+                        # VERIFICAÇÃO EXTRA: Se image_link estiver vazio, tente image_link_3
+                        if not produto['image_link'] or produto['image_link'].strip() == '':
+                            produto['image_link'] = row.get('image_link_3', '')
+                        
                         produtos.append(produto)
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
+                    print(f"Erro ao processar produto: {str(e)}")
                     continue
     except FileNotFoundError:
+        print("Arquivo produtos.csv não encontrado!")
+        return []
+    except Exception as e:
+        print(f"Erro ao ler CSV: {str(e)}")
         return []
     
     # Ordenar por desconto (maior primeiro)
     produtos.sort(key=lambda x: x['discount_percentage'], reverse=True)
+    print(f"Carregados {len(produtos)} produtos com desconto > 20%")
     return produtos
 
 @produtos_bp.route('/produtos', methods=['GET'])
