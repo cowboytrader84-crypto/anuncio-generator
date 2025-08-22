@@ -1,0 +1,40 @@
+🚀 INSTRUÇÕES RÁPIDAS - GERADOR DE ANÚNCIOS
+
+1. ABRIR TERMINAL/PROMPT DE COMANDO
+
+2. NAVEGAR ATÉ A PASTA:
+   cd anuncio-generator
+
+3. ATIVAR AMBIENTE VIRTUAL:
+   Linux/Mac: source venv/bin/activate
+   Windows: venv\Scripts\activate
+
+4. EXECUTAR APLICAÇÃO:
+   python src/main.py
+
+5. ABRIR NAVEGADOR:
+   http://localhost:5000
+
+6. USAR A APLICAÇÃO:
+   - Navegue pelos produtos
+   - Use a busca para encontrar produtos específicos
+   - Clique em "Gerar Anúncio" no produto desejado
+   - Baixe o anúncio em PNG
+
+✅ PRONTO! Sua aplicação está funcionando!
+
+📊 DADOS CARREGADOS:
+- 3.779 produtos com desconto
+- 189 páginas de produtos
+- Filtro automático: apenas produtos com +20% desconto
+
+🎨 ANÚNCIOS GERADOS:
+- Formato: PNG 1080x1080
+- Layout profissional
+- Download instantâneo
+
+❓ PROBLEMAS?
+- Verifique se Python está instalado
+- Confirme se o ambiente virtual está ativo
+- Leia o arquivo README.md para mais detalhes
+

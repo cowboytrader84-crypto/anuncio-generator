@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Anúncios - EscolhaShop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            padding: 30px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-category {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .product-prices {
+            margin-bottom: 15px;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .sale-price {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-left: 10px;
+        }
+
+        .discount-badge {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .product-rating {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+            color: #f39c12;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 30px;
+            flex-wrap: wrap;
+        }
+
+        .page-btn {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover, .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .generated-ad {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .generated-ad img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .download-btn {
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            
+            .search-container {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+            
+            .stats {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛍️ Gerador de Anúncios</h1>
+            <p>Selecione produtos e gere anúncios profissionais automaticamente</p>
+        </div>
+
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar produtos por nome ou descrição...">
+                <button onclick="buscarProdutos()" class="btn btn-primary">🔍 Buscar</button>
+                <button onclick="carregarProdutos()" class="btn btn-primary">🔄 Recarregar</button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalProdutos">0</div>
+                    <div class="stat-label">Produtos Encontrados</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="paginaAtual">1</div>
+                    <div class="stat-label">Página Atual</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalPaginas">1</div>
+                    <div class="stat-label">Total de Páginas</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            Carregando produtos...
+        </div>
+
+        <div id="productsContainer" class="products-grid" style="display: none;">
+        </div>
+
+        <div id="pagination" class="pagination" style="display: none;">
+        </div>
+    </div>
+
+    <!-- Modal para exibir anúncio gerado -->
+    <div id="adModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="fecharModal()">&times;</span>
+            <h2>Anúncio Gerado</h2>
+            <div id="generatedAd" class="generated-ad">
+                <div class="loading">Gerando anúncio...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentSearch = '';
+
+        async function carregarProdutos(page = 1, search = '') {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('productsContainer').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+
+                const response = await fetch(`/api/produtos?page=${page}&per_page=20&search=${encodeURIComponent(search)}`);
+                const data = await response.json();
+
+                if (data.produtos) {
+                    exibirProdutos(data.produtos);
+                    atualizarEstatisticas(data);
+                    criarPaginacao(data);
+                    currentPage = data.page;
+                    totalPages = data.total_pages;
+                    currentSearch = search;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                document.getElementById('loading').innerHTML = 'Erro ao carregar produtos. Tente novamente.';
+            }
+        }
+
+        function exibirProdutos(produtos) {
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = '';
+
+            produtos.forEach(produto => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                
+                const stars = '★'.repeat(Math.floor(produto.rating)) + '☆'.repeat(5 - Math.floor(produto.rating));
+                
+                card.innerHTML = `
+                    <div class="product-image">
+                        <img src="${produto.image_link}" alt="${produto.title}" onerror="this.style.display='none'">
+                    </div>
+                    <div class="product-info">
+                        <div class="product-category">${produto.category}</div>
+                        <div class="product-title">${produto.title}</div>
+                        <div class="product-rating">
+                            <span>${stars}</span>
+                            <span>(${produto.rating.toFixed(1)})</span>
+                        </div>
+                        <div class="product-prices">
+                            <span class="original-price">R$ ${produto.price.toFixed(2)}</span>
+                            <span class="sale-price">R$ ${produto.sale_price.toFixed(2)}</span>
+                        </div>
+                        <div class="discount-badge">${Math.round(produto.discount_percentage)}% OFF</div>
+                        <button onclick="gerarAnuncio('${produto.id}')" class="btn btn-success" style="width: 100%; margin-top: 15px;">
+                            🎨 Gerar Anúncio
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('productsContainer').style.display = 'grid';
+        }
+
+        function atualizarEstatisticas(data) {
+            document.getElementById('totalProdutos').textContent = data.total;
+            document.getElementById('paginaAtual').textContent = data.page;
+            document.getElementById('totalPaginas').textContent = data.total_pages;
+        }
+
+        function criarPaginacao(data) {
+            const container = document.getElementById('pagination');
+            container.innerHTML = '';
+
+            if (data.total_pages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Botão anterior
+            if (data.page > 1) {
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'page-btn';
+                prevBtn.textContent = '← Anterior';
+                prevBtn.onclick = () => carregarProdutos(data.page - 1, currentSearch);
+                container.appendChild(prevBtn);
+            }
+
+            // Números das páginas
+            const startPage = Math.max(1, data.page - 2);
+            const endPage = Math.min(data.total_pages, data.page + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `page-btn ${i === data.page ? 'active' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => carregarProdutos(i, currentSearch);
+                container.appendChild(pageBtn);
+            }
+
+            // Botão próximo
+            if (data.page < data.total_pages) {
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'page-btn';
+                nextBtn.textContent = 'Próximo →';
+                nextBtn.onclick = () => carregarProdutos(data.page + 1, currentSearch);
+                container.appendChild(nextBtn);
+            }
+
+            container.style.display = 'flex';
+        }
+
+        function buscarProdutos() {
+            const search = document.getElementById('searchInput').value;
+            carregarProdutos(1, search);
+        }
+
+        async function gerarAnuncio(produtoId) {
+            try {
+                abrirModal();
+                document.getElementById('generatedAd').innerHTML = '<div class="loading">Gerando anúncio...</div>';
+
+                const response = await fetch(`/api/gerar-anuncio/${produtoId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('generatedAd').innerHTML = `
+                        <h3>${data.produto.title}</h3>
+                        <img src="${data.image}" alt="Anúncio gerado" style="max-width: 500px;">
+                        <br>
+                        <a href="${data.image}" download="anuncio_${produtoId}.png" class="btn btn-success download-btn">
+                            📥 Baixar Anúncio PNG
+                        </a>
+                    `;
+                } else {
+                    document.getElementById('generatedAd').innerHTML = `
+                        <div style="color: red;">Erro: ${data.error}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro ao gerar anúncio:', error);
+                document.getElementById('generatedAd').innerHTML = `
+                    <div style="color: red;">Erro ao gerar anúncio. Tente novamente.</div>
+                `;
+            }
+        }
+
+        function abrirModal() {
+            document.getElementById('adModal').style.display = 'flex';
+        }
+
+        function fecharModal() {
+            document.getElementById('adModal').style.display = 'none';
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                buscarProdutos();
+            }
+        });
+
+        // Fechar modal clicando fora
+        document.getElementById('adModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModal();
+            }
+        });
+
+        // Carregar produtos ao iniciar
+        window.addEventListener('load', () => {
+            carregarProdutos();
+        });
+    </script>
+</body>
+</html>
+
