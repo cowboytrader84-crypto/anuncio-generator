@@ -147,8 +147,15 @@ def gerar_anuncio(produto):
         img_height = 400
         
         try:
+            # CORREÇÃO: Verificar e completar URL da imagem
+            image_link = produto['image_link']
+            
+            # Se a URL não começar com http, adicione https://
+            if image_link and not image_link.startswith(('http://', 'https://')):
+                image_link = 'https://' + image_link
+            
             # Baixar imagem real do produto
-            response = requests.get(produto['image_link'], timeout=10)
+            response = requests.get(image_link, timeout=10)
             response.raise_for_status()
             
             # Carregar imagem
