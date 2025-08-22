@@ -94,138 +94,84 @@ def obter_produto(produto_id):
 def gerar_anuncio(produto):
     """Gera uma imagem de anúncio baseada no modelo"""
     try:
-        # Criar uma imagem 1080x1080 com fundo branco (alterado de preto para branco)
+        # Criar uma imagem 1080x1080 com fundo branco
         width, height = 1080, 1080
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
         
-        # Cores - ajustadas para layout mais clean
-        cor_titulo_loja = '#e74c3c'  # Vermelho (destaque)
-        cor_linha = '#bdc3c7'        # Cinza claro
-        cor_titulo_produto = '#2c3e50' # Azul escuro
-        cor_preco_original = '#7f8c8d' # Cinza
-        cor_preco_promocional = '#e74c3c' # Vermelho
-        cor_desconto = '#27ae60'      # Verde
-        cor_descricao = '#34495e'     # Azul mais escuro
-        cor_fundo_destaque = '#f8f9fa' # Cinza muito claro
+        # Configurar cores
+        cor_fundo_header = '#e74c3c'
+        cor_texto_header = 'white'
+        cor_titulo = '#2c3e50'
+        cor_descricao = '#7f8c8d'
+        cor_destaque = '#e74c3c'
+        cor_preco_original = '#95a5a6'
+        cor_preco_promocional = '#2c3e50'
+        cor_desconto = '#27ae60'
+        cor_fundo_botao = '#3498db'
         
+        # Configurar fontes (aumentei os tamanhos)
         try:
-            # Tentar usar fontes TrueType
-            font_loja = ImageFont.truetype("arial.ttf", 50)        # Nome da loja - MAIOR
-            font_titulo = ImageFont.truetype("arial.ttf", 36)      # Título do produto
-            font_preco = ImageFont.truetype("arial.ttf", 42)       # Preços 
-            font_desconto = ImageFont.truetype("arial.ttf", 48)    # Desconto 
-            font_descricao = ImageFont.truetype("arial.ttf", 30)   # Descrição
+            font_header = ImageFont.truetype("arial.ttf", 46)
+            font_titulo = ImageFont.truetype("arial.ttf", 52)
+            font_descricao = ImageFont.truetype("arial.ttf", 36)
+            font_destaque = ImageFont.truetype("arial.ttf", 42)
+            font_preco_original = ImageFont.truetype("arial.ttf", 42)
+            font_preco_promocional = ImageFont.truetype("arial.ttf", 72)
+            font_desconto = ImageFont.truetype("arial.ttf", 46)
+            font_botao = ImageFont.truetype("arial.ttf", 38)
         except IOError:
-            # Se não encontrar as fontes TrueType, usar fallback
-            font_loja = ImageFont.load_default()
+            # Fallback para fontes padrão (aumentar tamanho)
+            font_header = ImageFont.load_default()
             font_titulo = ImageFont.load_default()
-            font_preco = ImageFont.load_default()
-            font_desconto = ImageFont.load_default()
             font_descricao = ImageFont.load_default()
+            font_destaque = ImageFont.load_default()
+            font_preco_original = ImageFont.load_default()
+            font_preco_promocional = ImageFont.load_default()
+            font_desconto = ImageFont.load_default()
+            font_botao = ImageFont.load_default()
         
-        # Cabeçalho com fundo colorido
-        draw.rectangle([0, 0, width, 120], fill='#e74c3c')
+        # Desenhar cabeçalho
+        draw.rectangle([(0, 0), (width, 130)], fill=cor_fundo_header)
+        draw.text((40, 65), 'ESCOLHASHOP', fill=cor_texto_header, font=font_header, anchor='lm')
         
-        # Nome da loja no topo (centralizado)
-        draw.text((width//2, 60), 'ESCOLHASHOP', fill='white', font=font_loja, anchor='mm')
+        # Badges de entrega
+        draw.text((width-300, 45), 'COMPRAS ATÉ 12H', fill=cor_texto_header, font=font_descricao, anchor='lm')
+        draw.text((width-300, 85), 'ENVIO NO MESMO DIA', fill=cor_texto_header, font=font_descricao, anchor='lm')
         
-        # Linha separadora
-        draw.rectangle([50, 130, width-50, 135], fill=cor_linha)
+        # Título do produto
+        titulo = produto['title']
+        if len(titulo) > 40:  # Limitar tamanho do título
+            titulo = titulo[:37] + '...'
         
-        # Título do produto (quebrar em linhas se muito longo)
-        titulo = produto['title'][:70]  # Limitar tamanho
-        y_titulo = 180
+        draw.text((width//2, 230), titulo, fill=cor_titulo, font=font_titulo, anchor='mm')
         
-        # Quebrar título em múltiplas linhas se necessário
-        palavras = titulo.split()
-        linhas = []
-        linha_atual = ""
+        # Descrição do produto
+        descricao = produto['description']
+        if len(descricao) > 60:  # Limitar tamanho da descrição
+            descricao = descricao[:57] + '...'
         
-        for palavra in palavras:
-            if len(linha_atual + palavra) < 30:
-                linha_atual += palavra + " "
-            else:
-                if linha_atual:
-                    linhas.append(linha_atual.strip())
-                linha_atual = palavra + " "
+        draw.text((width//2, 320), descricao, fill=cor_descricao, font=font_descricao, anchor='mm')
         
-        if linha_atual:
-            linhas.append(linha_atual.strip())
+        # Texto de destaque
+        draw.text((width//2, 400), "MELHOR OFERTA COM DESCONTO DA SHOPEE!", fill=cor_destaque, font=font_destaque, anchor='mm')
         
-        for i, linha in enumerate(linhas[:3]):  # Máximo 3 linhas
-            draw.text((width//2, y_titulo + i*50), linha, fill=cor_titulo_produto, font=font_titulo, anchor='mm')
-        
-        # Área para imagem do produto
-        img_y = 350
-        img_height = 400
-        
-        try:
-            # CORREÇÃO: Verificar e completar URL da imagem
-            image_link = produto['image_link']
-            
-            # Se a URL estiver vazia, use placeholder
-            if not image_link or image_link.strip() == '':
-                raise Exception("URL da imagem está vazia")
-            
-            # Se a URL não começar com http, adicione https://
-            if not image_link.startswith(('http://', 'https://')):
-                image_link = 'https://' + image_link
-            
-            # Baixar imagem real do produto
-            response = requests.get(image_link, timeout=10)
-            response.raise_for_status()
-            
-            # Carregar imagem
-            produto_img = Image.open(BytesIO(response.content))
-            
-            # Redimensionar mantendo proporção
-            produto_img.thumbnail((600, 400))
-            
-            # Calcular posição para centralizar
-            img_width, img_height = produto_img.size
-            x_pos = (width - img_width) // 2
-            y_pos = img_y + (400 - img_height) // 2
-            
-            # Colar imagem no anúncio
-            img.paste(produto_img, (x_pos, y_pos))
-            
-        except Exception as e:
-            # Fallback: desenhar retângulo placeholder
-            draw.rectangle([(width-500)//2, img_y, (width+500)//2, img_y + 400], outline=cor_linha, width=2)
-            draw.text((width//2, img_y + 200), 'IMAGEM DO PRODUTO', fill=cor_linha, font=font_titulo, anchor='mm')
-            print(f"Erro ao carregar imagem: {str(e)}")
-        
-        # Área de preços com fundo destacado
-        preco_y = img_y + img_height + 30
-        draw.rectangle([50, preco_y, width-50, preco_y + 180], fill=cor_fundo_destaque)
-        
-        # Preço original (riscado)
+        # Preços
         preco_original = f"De: R$ {produto['price']:.2f}"
-        draw.text((width//2, preco_y + 40), preco_original, fill=cor_preco_original, font=font_preco, anchor='mm')
-        
-        # Linha sobre o preço original (simulando riscado)
-        bbox = draw.textbbox((0, 0), preco_original, font=font_preco)
-        text_width = bbox[2] - bbox[0]
-        start_x = width//2 - text_width//2
-        end_x = width//2 + text_width//2
-        draw.line([start_x, preco_y + 50, end_x, preco_y + 50], fill=cor_preco_original, width=3)
-        
-        # Preço promocional
         preco_promocional = f"POR: R$ {produto['sale_price']:.2f}"
-        draw.text((width//2, preco_y + 90), preco_promocional, fill=cor_preco_promocional, font=font_preco, anchor='mm')
+        desconto = f"{int(produto['discount_percentage'])}% OFF"
         
-        # Desconto
-        desconto_text = f"{int(produto['discount_percentage'])}% OFF"
-        draw.text((width//2, preco_y + 140), desconto_text, fill=cor_desconto, font=font_desconto, anchor='mm')
+        draw.text((width//2, 500), preco_original, fill=cor_preco_original, font=font_preco_original, anchor='mm')
+        draw.text((width//2, 580), preco_promocional, fill=cor_preco_promocional, font=font_preco_promocional, anchor='mm')
+        draw.text((width//2, 670), desconto, fill=cor_desconto, font=font_desconto, anchor='mm')
         
-        # Rodapé com informações adicionais
-        rodape_y = height - 80
-        draw.rectangle([0, rodape_y, width, height], fill='#f1f2f6')
+        # Botão de compra
+        draw.rectangle([(width//2 - 200, 750), (width//2 + 200, 830)], fill=cor_fundo_botao)
+        draw.text((width//2, 790), "COMPRAR AGORA", fill='white', font=font_botao, anchor='mm')
         
-        # Descrição adicional
-        descricao = "⚡ Entrega Rápida | ✅ Garantia | 🔄 Devolução Fácil"
-        draw.text((width//2, rodape_y + 40), descricao, fill=cor_descricao, font=font_descricao, anchor='mm')
+        # Rodapé
+        rodape = "⚡ Frete Grátis • 💯 Garantia • 🔄 Troca Fácil"
+        draw.text((width//2, 950), rodape, fill=cor_descricao, font=font_descricao, anchor='mm')
         
         return img
         
@@ -234,7 +180,7 @@ def gerar_anuncio(produto):
         # Retornar uma imagem de erro
         img = Image.new('RGB', (1080, 1080), color='white')
         draw = ImageDraw.Draw(img)
-        draw.text((540, 540), f"Erro: {str(e)}", fill='red', font=ImageFont.load_default())
+        draw.text((540, 540), f"Erro: {str(e)}", fill='red', anchor='mm')
         return img
 
 @produtos_bp.route('/gerar-anuncio/<produto_id>', methods=['POST'])
