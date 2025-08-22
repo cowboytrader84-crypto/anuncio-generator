@@ -1,240 +1,265 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Anúncios - Layout Profissional</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
+import requests
+from io import BytesIO
+import csv
+import os
+from flask import Blueprint, jsonify, request
+from PIL import Image, ImageDraw, ImageFont
+import io
+import base64
+
+produtos_bp = Blueprint('produtos', __name__)
+
+def carregar_produtos():
+    """Carrega os produtos do arquivo CSV"""
+    produtos = []
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'produtos.csv')
+    
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # Filtrar apenas produtos com desconto significativo
+                try:
+                    discount = float(row.get('discount_percentage', 0))
+                    if discount > 20:  # Apenas produtos com mais de 20% de desconto
+                        produto = {
+                            'id': row.get('itemid', ''),
+                            'title': row.get('title', ''),
+                            'description': row.get('description', ''),
+                            'price': float(row.get('price', 0)),
+                            'sale_price': float(row.get('sale_price', 0)),
+                            'discount_percentage': discount,
+                            'image_link': row.get('image_link', ''),
+                            'product_link': row.get('product_link', ''),
+                            'category': row.get('global_category1', ''),
+                            'rating': float(row.get('item_rating', 0))
+                        }
+                        # VERIFICAÇÃO EXTRA: Se image_link estiver vazio, tente image_link_3
+                        if not produto['image_link'] or produto['image_link'].strip() == '':
+                            produto['image_link'] = row.get('image_link_3', '')
+                        
+                        produtos.append(produto)
+                except (ValueError, TypeError) as e:
+                    print(f"Erro ao processar produto: {str(e)}")
+                    continue
+    except FileNotFoundError:
+        print("Arquivo produtos.csv não encontrado!")
+        return []
+    except Exception as e:
+        print(f"Erro ao ler CSV: {str(e)}")
+        return []
+    
+    # Ordenar por desconto (maior primeiro)
+    produtos.sort(key=lambda x: x['discount_percentage'], reverse=True)
+    print(f"Carregados {len(produtos)} produtos com desconto > 20%")
+    return produtos
+
+@produtos_bp.route('/produtos', methods=['GET'])
+def listar_produtos():
+    """Retorna a lista de produtos"""
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+    search = request.args.get('search', '')
+    
+    produtos = carregar_produtos()
+    
+    # Filtrar por busca se fornecida
+    if search:
+        produtos = [p for p in produtos if search.lower() in p['title'].lower() or search.lower() in p['description'].lower()]
+    
+    # Paginação
+    start = (page - 1) * per_page
+    end = start + per_page
+    produtos_pagina = produtos[start:end]
+    
+    return jsonify({
+        'produtos': produtos_pagina,
+        'total': len(produtos),
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (len(produtos) + per_page - 1) // per_page
+    })
+
+@produtos_bp.route('/produto/<produto_id>', methods=['GET'])
+def obter_produto(produto_id):
+    """Retorna um produto específico"""
+    produtos = carregar_produtos()
+    produto = next((p for p in produtos if p['id'] == produto_id), None)
+    
+    if produto:
+        return jsonify(produto)
+    else:
+        return jsonify({'error': 'Produto não encontrado'}), 404
+
+def gerar_anuncio(produto):
+    """Gera uma imagem de anúncio baseada no modelo"""
+    try:
+        # Criar uma imagem 1080x1080 com fundo branco (alterado de preto para branco)
+        width, height = 1080, 1080
+        img = Image.new('RGB', (width, height), color='white')
+        draw = ImageDraw.Draw(img)
         
-        body {
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+        # Cores - ajustadas para layout mais clean
+        cor_titulo_loja = '#e74c3c'  # Vermelho (destaque)
+        cor_linha = '#bdc3c7'        # Cinza claro
+        cor_titulo_produto = '#2c3e50' # Azul escuro
+        cor_preco_original = '#7f8c8d' # Cinza
+        cor_preco_promocional = '#e74c3c' # Vermelho
+        cor_desconto = '#27ae60'      # Verde
+        cor_descricao = '#34495e'     # Azul mais escuro
+        cor_fundo_destaque = '#f8f9fa' # Cinza muito claro
         
-        .ad-container {
-            width: 1080px;
-            height: 1080px;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            position: relative;
-        }
+        try:
+            # Tentar usar fontes TrueType
+            font_loja = ImageFont.truetype("arial.ttf", 50)        # Nome da loja - MAIOR
+            font_titulo = ImageFont.truetype("arial.ttf", 36)      # Título do produto
+            font_preco = ImageFont.truetype("arial.ttf", 42)       # Preços 
+            font_desconto = ImageFont.truetype("arial.ttf", 48)    # Desconto 
+            font_descricao = ImageFont.truetype("arial.ttf", 30)   # Descrição
+        except IOError:
+            # Se não encontrar as fontes TrueType, usar fallback
+            font_loja = ImageFont.load_default()
+            font_titulo = ImageFont.load_default()
+            font_preco = ImageFont.load_default()
+            font_desconto = ImageFont.load_default()
+            font_descricao = ImageFont.load_default()
         
-        .ad-header {
-            background: linear-gradient(to right, #e74c3c, #c0392b);
-            padding: 25px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
+        # Cabeçalho com fundo colorido
+        draw.rectangle([0, 0, width, 120], fill='#e74c3c')
         
-        .logo {
-            font-size: 46px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
+        # Nome da loja no topo (centralizado)
+        draw.text((width//2, 60), 'ESCOLHASHOP', fill='white', font=font_loja, anchor='mm')
         
-        .shipping-info {
-            display: flex;
-            gap: 15px;
-        }
+        # Linha separadora
+        draw.rectangle([50, 130, width-50, 135], fill=cor_linha)
         
-        .shipping-badge {
-            background-color: white;
-            color: #e74c3c;
-            padding: 12px 20px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 26px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
+        # Título do produto (quebrar em linhas se muito longo)
+        titulo = produto['title'][:70]  # Limitar tamanho
+        y_titulo = 180
         
-        .product-section {
-            padding: 40px;
-            display: flex;
-            height: calc(100% - 130px);
-        }
+        # Quebrar título em múltiplas linhas se necessário
+        palavras = titulo.split()
+        linhas = []
+        linha_atual = ""
         
-        .product-image {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-        }
+        for palavra in palavras:
+            if len(linha_atual + palavra) < 30:
+                linha_atual += palavra + " "
+            else:
+                if linha_atual:
+                    linhas.append(linha_atual.strip())
+                linha_atual = palavra + " "
         
-        .product-image img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-        }
+        if linha_atual:
+            linhas.append(linha_atual.strip())
         
-        .product-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 0 40px;
-        }
+        for i, linha in enumerate(linhas[:3]):  # Máximo 3 linhas
+            draw.text((width//2, y_titulo + i*50), linha, fill=cor_titulo_produto, font=font_titulo, anchor='mm')
         
-        .product-title {
-            font-size: 52px;
-            font-weight: 800;
-            margin-bottom: 30px;
-            line-height: 1.2;
-            color: #2c3e50;
-            text-transform: uppercase;
-        }
+        # Área para imagem do produto
+        img_y = 350
+        img_height = 400
         
-        .product-description {
-            font-size: 36px;
-            font-weight: 600;
-            margin-bottom: 40px;
-            color: #7f8c8d;
-            line-height: 1.3;
-        }
-        
-        .product-highlight {
-            font-size: 42px;
-            font-weight: 700;
-            margin-bottom: 50px;
-            color: #e74c3c;
-            line-height: 1.3;
-        }
-        
-        .pricing {
-            margin-bottom: 40px;
-        }
-        
-        .original-price {
-            font-size: 42px;
-            text-decoration: line-through;
-            color: #95a5a6;
-            margin-bottom: 15px;
-        }
-        
-        .current-price {
-            font-size: 72px;
-            font-weight: 900;
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        
-        .discount-badge {
-            display: inline-block;
-            background: linear-gradient(to right, #27ae60, #2ecc71);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size: 46px;
-            font-weight: 800;
-        }
-        
-        .cta-button {
-            background: linear-gradient(to right, #3498db, #2980b9);
-            color: white;
-            border: none;
-            padding: 25px 50px;
-            font-size: 38px;
-            font-weight: 700;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 30px;
-            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.3);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
-        }
-        
-        .rating {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 30px;
-            font-size: 32px;
-            color: #7f8c8d;
-        }
-        
-        .stars {
-            color: #f1c40f;
-            font-size: 36px;
-        }
-        
-        .footer-note {
-            position: absolute;
-            bottom: 30px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 28px;
-            color: #7f8c8d;
-        }
-        
-        @media (max-width: 1120px) {
-            .ad-container {
-                transform: scale(0.8);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="ad-container">
-        <div class="ad-header">
-            <div class="logo">ESCOLHASHOP</div>
-            <div class="shipping-info">
-                <div class="shipping-badge">COMPRAS ATÉ 12H</div>
-                <div class="shipping-badge">ENVIO NO MESMO DIA</div>
-            </div>
-        </div>
-        
-        <div class="product-section">
-            <div class="product-image">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'%3E%3Crect width='500' height='500' fill='%23e9ecef'/%3E%3Cpath d='M250,150 L325,250 L275,350 L225,350 L175,250 Z' fill='%233498db' stroke='%232980b9' stroke-width='15'/%3E%3Ccircle cx='250' cy='250' r='80' fill='%23e74c3c' stroke='%23c0392b' stroke-width='15'/%3E%3Ctext x='250' y='420' font-family='Arial' font-size='30' font-weight='bold' text-anchor='middle' fill='%237f8c8d'%3EIMAGEM DO PRODUTO%3C/text%3E%3C/svg%3E" alt="Produto">
-            </div>
+        try:
+            # CORREÇÃO: Verificar e completar URL da imagem
+            image_link = produto['image_link']
             
-            <div class="product-info">
-                <h1 class="product-title">TORNEIRA JARDIM ESFERA COM PORTA CADEADO</h1>
-                
-                <p class="product-description">Torneira de esfera com porta cadeado em metal resistente para parede externa</p>
-                
-                <p class="product-highlight">MELHOR TORNEIRA ESFERA COM PORTA CADEADO DA SHOPEE!</p>
-                
-                <div class="pricing">
-                    <div class="original-price">De: R$ 119,99</div>
-                    <div class="current-price">POR: R$ 22,99</div>
-                    <div class="discount-badge">81% OFF</div>
-                </div>
-                
-                <div class="rating">
-                    <div class="stars">★★★★★</div>
-                    <div>(4.8) 2.478 avaliações</div>
-                </div>
-                
-                <button class="cta-button">COMPRAR AGORA</button>
-            </div>
-        </div>
+            # Se a URL estiver vazia, use placeholder
+            if not image_link or image_link.strip() == '':
+                raise Exception("URL da imagem está vazia")
+            
+            # Se a URL não começar com http, adicione https://
+            if not image_link.startswith(('http://', 'https://')):
+                image_link = 'https://' + image_link
+            
+            # Baixar imagem real do produto
+            response = requests.get(image_link, timeout=10)
+            response.raise_for_status()
+            
+            # Carregar imagem
+            produto_img = Image.open(BytesIO(response.content))
+            
+            # Redimensionar mantendo proporção
+            produto_img.thumbnail((600, 400))
+            
+            # Calcular posição para centralizar
+            img_width, img_height = produto_img.size
+            x_pos = (width - img_width) // 2
+            y_pos = img_y + (400 - img_height) // 2
+            
+            # Colar imagem no anúncio
+            img.paste(produto_img, (x_pos, y_pos))
+            
+        except Exception as e:
+            # Fallback: desenhar retângulo placeholder
+            draw.rectangle([(width-500)//2, img_y, (width+500)//2, img_y + 400], outline=cor_linha, width=2)
+            draw.text((width//2, img_y + 200), 'IMAGEM DO PRODUTO', fill=cor_linha, font=font_titulo, anchor='mm')
+            print(f"Erro ao carregar imagem: {str(e)}")
         
-        <div class="footer-note">
-            ⚡ Frete Grátis • 💯 Garantia de 1 Ano • 🔄 Troca Fácil
-        </div>
-    </div>
-</body>
-</html>
+        # Área de preços com fundo destacado
+        preco_y = img_y + img_height + 30
+        draw.rectangle([50, preco_y, width-50, preco_y + 180], fill=cor_fundo_destaque)
+        
+        # Preço original (riscado)
+        preco_original = f"De: R$ {produto['price']:.2f}"
+        draw.text((width//2, preco_y + 40), preco_original, fill=cor_preco_original, font=font_preco, anchor='mm')
+        
+        # Linha sobre o preço original (simulando riscado)
+        bbox = draw.textbbox((0, 0), preco_original, font=font_preco)
+        text_width = bbox[2] - bbox[0]
+        start_x = width//2 - text_width//2
+        end_x = width//2 + text_width//2
+        draw.line([start_x, preco_y + 50, end_x, preco_y + 50], fill=cor_preco_original, width=3)
+        
+        # Preço promocional
+        preco_promocional = f"POR: R$ {produto['sale_price']:.2f}"
+        draw.text((width//2, preco_y + 90), preco_promocional, fill=cor_preco_promocional, font=font_preco, anchor='mm')
+        
+        # Desconto
+        desconto_text = f"{int(produto['discount_percentage'])}% OFF"
+        draw.text((width//2, preco_y + 140), desconto_text, fill=cor_desconto, font=font_desconto, anchor='mm')
+        
+        # Rodapé com informações adicionais
+        rodape_y = height - 80
+        draw.rectangle([0, rodape_y, width, height], fill='#f1f2f6')
+        
+        # Descrição adicional
+        descricao = "⚡ Entrega Rápida | ✅ Garantia | 🔄 Devolução Fácil"
+        draw.text((width//2, rodape_y + 40), descricao, fill=cor_descricao, font=font_descricao, anchor='mm')
+        
+        return img
+        
+    except Exception as e:
+        print(f"Erro ao gerar anúncio: {str(e)}")
+        # Retornar uma imagem de erro
+        img = Image.new('RGB', (1080, 1080), color='white')
+        draw = ImageDraw.Draw(img)
+        draw.text((540, 540), f"Erro: {str(e)}", fill='red', font=ImageFont.load_default())
+        return img
+
+@produtos_bp.route('/gerar-anuncio/<produto_id>', methods=['POST'])
+def gerar_anuncio_produto(produto_id):
+    """Gera um anúncio para um produto específico"""
+    produtos = carregar_produtos()
+    produto = next((p for p in produtos if p['id'] == produto_id), None)
+    
+    if not produto:
+        return jsonify({'error': 'Produto não encontrado'}), 404
+    
+    try:
+        # Gerar a imagem do anúncio
+        img = gerar_anuncio(produto)
+        
+        # Converter para base64 para enviar via JSON
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+        
+        return jsonify({
+            'success': True,
+            'image': f"data:image/png;base64,{img_str}",
+            'produto': produto
+        })
+    
+    except Exception as e:
+        return jsonify({'error': f'Erro ao gerar anúncio: {str(e)}'}), 500
