@@ -12,7 +12,7 @@ produtos_bp = Blueprint('produtos', __name__)
 def carregar_produtos():
     """Carrega os produtos do arquivo CSV"""
     produtos = []
-    csv_path = os.path.join(os.path.dirname(__file__), 'produtos.csv')
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'produtos.csv')
     
     try:
         with open(csv_path, 'r', encoding='utf-8') as file:
