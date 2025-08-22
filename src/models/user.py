@@ -16,3 +16,9 @@ class User(db.Model):
             'username': self.username,
             'email': self.email
         }
+def to_dict(self):
+    return {
+        'id': self.id,
+        'username': self.username,
+        'email': self.email
+    }  # FALTAVA ESTE FECHAMENTO

@@ -10,7 +10,7 @@ produtos_bp = Blueprint('produtos', __name__)
 def carregar_produtos():
     """Carrega os produtos do arquivo CSV"""
     produtos = []
-    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'produtos.csv')
+    csv_path = os.path.join(os.path.dirname(__file__), 'produtos.csv')
     
     try:
         with open(csv_path, 'r', encoding='utf-8') as file:
@@ -96,15 +96,19 @@ def gerar_anuncio(produto):
     cor_descricao = 'white'
     
     try:
-        # Fontes (usando fontes padrão do sistema)
-        font_loja = ImageFont.load_default()
-        font_titulo = ImageFont.load_default()
-        font_preco = ImageFont.load_default()
-        font_desconto = ImageFont.load_default()
-        font_descricao = ImageFont.load_default()
-    except:
-        # Fallback para fonte padrão
-        font_loja = font_titulo = font_preco = font_desconto = font_descricao = ImageFont.load_default()
+    # Tentar usar fontes TrueType - TAMANHOS MAIORES para melhor visualização
+    font_loja = ImageFont.truetype("arial.ttf", 40)        # Nome da loja - GRANDE
+    font_titulo = ImageFont.truetype("arial.ttf", 30)      # Título do produto - MÉDIO
+    font_preco = ImageFont.truetype("arial.ttf", 35)       # Preços - UM POUCO MAIOR
+    font_desconto = ImageFont.truetype("arial.ttf", 40)    # Desconto - GRANDE (destaque)
+    font_descricao = ImageFont.truetype("arial.ttf", 25)   # Descrição - PEQUENO
+except IOError:
+    # Se não encontrar as fontes TrueType, usar fallback
+    font_loja = ImageFont.load_default()
+    font_titulo = ImageFont.load_default()
+    font_preco = ImageFont.load_default()
+    font_desconto = ImageFont.load_default()
+    font_descricao = ImageFont.load_default()
     
     # Nome da loja no topo
     draw.text((width//2, 50), 'ESCOLHASHOP', fill=cor_titulo_loja, font=font_loja, anchor='mt')
